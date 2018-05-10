@@ -6,7 +6,7 @@
   "windowSize": 20,
   "maxFrequency": 8000,
   "trainingData": [
-    "/speech-to-text/training_data.json"
+    "speech-to-text/training_data.json"
   ],
-  "alphabetPath": "/speech-to-text/examples/english.json"
+  "alphabetPath": "speech-to-text/examples/english.json"
 }
