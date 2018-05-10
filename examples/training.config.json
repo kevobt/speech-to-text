@@ -1,0 +1,12 @@
+{
+  "epochs": 10,
+  "batchSize": 20,
+  "trainingDataQuantity": 50000,
+  "net": "graves",
+  "windowSize": 20,
+  "maxFrequency": 8000,
+  "trainingData": [
+    "/speech-to-text/training_data.json"
+  ],
+  "alphabetPath": "/speech-to-text/examples/english.json"
+}
