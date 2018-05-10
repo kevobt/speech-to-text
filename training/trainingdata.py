@@ -10,20 +10,16 @@ from speech.alphabet import Alphabet
 
 from logging import getLogger
 
-from utils.fs import safe_open
-
 
 class TrainingData:
-    def __init__(self, path: str, text: str, size: int):
+    def __init__(self, path: str, text: str):
         self.path = path
         self.text = text
-        self.size = size
 
     def to_json(self):
         return {
             'path': self.path,
-            'text': self.text,
-            'size': self.size
+            'text': self.text
         }
 
 
@@ -82,6 +78,6 @@ def load(path: str) -> List[TrainingData]:
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
     with open(path, 'r') as file:
-        training_data = [TrainingData(data['path'], data['text'], data['size']) for data in json.load(file)]
+        training_data = [TrainingData(data['path'], data['text']) for data in json.load(file)]
 
     return training_data
