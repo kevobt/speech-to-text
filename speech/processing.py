@@ -15,7 +15,7 @@ def calculate_mfccs(audio_file_path):
     return mfcc(data, rate, numcep=26)
 
 
-def normalize_mfcc(feature, window, max_freq, eps=1e-14):
+def normalize_mfcc(feature, window=15, max_freq=8000, eps=1e-14):
     """ Center a feature using the mean and std
     Params:
         feature (numpy.ndarray): Feature to normalize
@@ -27,5 +27,5 @@ def normalize_mfcc(feature, window, max_freq, eps=1e-14):
     return (feature - feats_mean) / (feats_std + eps)
 
 
-def calculate_feature_dimension(window, max_freq):
+def calculate_feature_dimension(window=15, max_freq=8000):
     return int(0.001 * window * max_freq) + 1
