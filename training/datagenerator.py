@@ -87,15 +87,11 @@ class DataGenerator:
     def __init__(self,
                  data: List[TrainingData],
                  alphabet: Alphabet,
-                 batch_size=20,
-                 window=20,
-                 max_frequency=8000):
+                 batch_size=20):
 
         self.data = data
         self.alphabet = alphabet
         self.batch_size = batch_size
-        self.window = window
-        self.max_frequency = max_frequency
         self.current_batch_index = 0
 
     def get_batch(self):
