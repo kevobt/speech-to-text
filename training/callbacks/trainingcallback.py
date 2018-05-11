@@ -12,8 +12,10 @@ class TrainingCallback(Callback):
     def on_epoch_end(self, epoch, logs=None):
         loss = logs['loss']
         validation_loss = logs['val_loss']
+        self.training.loss.append(loss)
+        self.training.validation_loss.append(validation_loss)
 
         if len(self.training.validation_loss) == 0 or validation_loss < self.training.validation_loss[-1]:
-            self.training.loss.append(loss)
-            self.training.validation_loss.append(validation_loss)
-            save(self.save_file_path, self.training)
+            save(self.save_file_path, self.training, True)
+        else:
+            save(self.save_file_path, self.training, False)

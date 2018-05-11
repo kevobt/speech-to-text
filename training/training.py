@@ -159,7 +159,7 @@ def create(path: str, config: TrainingConfig, overwrite: bool) -> Training:
     return Training(model, alphabet, batch_size, epochs, [], [], training_data)
 
 
-def save(path: str, training: Training):
+def save(path: str, training: Training, save_weights: bool):
     log = get_logger(__name__)
     training_name = os.path.splitext(os.path.basename(path))[0]
     directory_path = os.path.dirname(path)
@@ -167,7 +167,8 @@ def save(path: str, training: Training):
     weights_path = os.path.join(directory_path, training_name + '.weights.h5')
 
     # save weights as .h5
-    training.model.save_weights(weights_path)
+    if save_weights:
+        training.model.save_weights(weights_path)
 
     # save training .json
     with safe_open(save_path, "w") as file:
