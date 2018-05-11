@@ -1,5 +1,5 @@
 from typing import List
-from keras.optimizers import SGD
+from keras.optimizers import Adam
 
 from training.callbacks.trainingcallback import TrainingCallback
 from training.datagenerator import DataGenerator
@@ -30,7 +30,7 @@ def run_training(training: Training, save_file_path: str):
     training_data_generator, validation_data_generator = create_generators(training)
 
     # Take a stochastic gradient descent optimizer
-    optimizer = SGD(lr=0.02, decay=1e-6, momentum=0.9, nesterov=True, clipnorm=5)
+    optimizer = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-8)
 
     # add ctc layer to the model
     model = add_ctc_loss(training.model)
