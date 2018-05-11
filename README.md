@@ -101,7 +101,7 @@ Pass the following arguments:
 
 For example:
 ```shell
-python "trainings/graves" "media/audio.wav"
+python predict.py "trainings/graves" "media/audio.wav"
 ```
 
 ### Displaying training statistics
