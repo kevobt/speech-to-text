@@ -33,11 +33,11 @@ def run_training(training: Training, save_file_path: str):
     optimizer = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-8)
 
     # add ctc layer to the model
-    model = add_ctc_loss(training.model)
+    training.model = add_ctc_loss(training.model)
 
     # the CTC algorithm is implemented in teh softmax layer
     # therefore, use a dummy loss function
-    model.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer=optimizer)
+    training.model.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer=optimizer)
 
     steps_per_epoch = calc_steps_per_epoch(training_data_generator.data, training.batch_size)
     validation_steps = calc_steps_per_epoch(validation_data_generator.data, training.batch_size)
@@ -48,7 +48,7 @@ def run_training(training: Training, save_file_path: str):
 
     log.info("starting training ...")
 
-    model.fit_generator(generator=training_data_generator.next_batch(),
+    training.model.fit_generator(generator=training_data_generator.next_batch(),
                         steps_per_epoch=steps_per_epoch,
                         epochs=training.epochs,
                         validation_data=validation_data_generator.next_batch(),
