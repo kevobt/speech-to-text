@@ -39,6 +39,6 @@ def predict(training: Training, audio_path: str) -> str:
     # Add 1 to each predicted character. That is because the blank labels start at -1 in keras.
     # In this implementation, they start at 0.
     # The array decoded sequence must be flattened and converted from a numpy.ndarray into an ordinary array.
-    predicted_ints = (decoded_sequence + 1).flatten().tolist()
+    predicted_ints = decoded_sequence.flatten().tolist()
 
     return ''.join(int_to_text_sequence(predicted_ints, training.alphabet))
