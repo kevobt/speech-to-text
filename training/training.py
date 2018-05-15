@@ -44,7 +44,7 @@ class Training:
         return {
             "loss": self.loss,
             "validationLoss": self.validation_loss,
-            "alphabet": self.alphabet
+            "alphabet": self.alphabet.to_json()
         }
 
     @property
