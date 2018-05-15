@@ -43,7 +43,7 @@ class Training:
     def to_json(self):
         return {
             "loss": self.loss,
-            "validationLoss": self.loss,
+            "validationLoss": self.validation_loss,
             "alphabet": self.alphabet
         }
 
