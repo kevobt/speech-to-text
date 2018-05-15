@@ -44,6 +44,7 @@ class Training:
         return {
             "loss": self.loss,
             "validationLoss": self.loss,
+            "alphabet": self.alphabet
         }
 
     @property
