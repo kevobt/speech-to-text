@@ -1,9 +1,7 @@
 import argparse
-import os
-
 import matplotlib.pyplot as plot
 
-from training.training import load
+from training.trainingstatistics import load
 
 from logger import get_logger
 
@@ -28,7 +26,7 @@ def main(path: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Tool for displaying statistics of trainings")
-    parser.add_argument("path", help="Path to a directory where the training data is stored")
+    parser.add_argument("path", help="Path to a training statistics file")
     args = parser.parse_args()
 
     main(args.path)
