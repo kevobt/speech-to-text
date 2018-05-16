@@ -3,6 +3,7 @@ import json
 
 from typing import List
 
+from logger import get_logger
 from utils.fs import safe_open
 
 
@@ -44,3 +45,11 @@ def load(training_plan_path: str) -> TrainingConfig:
                           training_plan["trainingDataQuantity"],
                           training_plan["trainingData"],
                           training_plan["alphabetPath"])
+
+
+def save(path: str, config: TrainingConfig):
+    log = get_logger(__name__)
+
+    with safe_open(path, 'w') as file:
+        file.write(json.dumps(config.to_json(), indent=4))
+    log.info('Saved config to %s' % os.path.abspath(path))

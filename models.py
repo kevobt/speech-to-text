@@ -12,24 +12,21 @@ from keras.layers import (BatchNormalization,
                           Bidirectional,
                           LSTM,
                           Lambda,
-                          GaussianNoise)
+                          GaussianNoise, Conv1D, ZeroPadding1D)
 
+from logger import get_logger
 from speech.alphabet import Alphabet
 from training.errors.modelnotfound import ModelNotFoundError
 from utils.fs import safe_open
 
 
 class SaveFile:
-    def __init__(self, loss: List[float], validation_loss: List[float], alphabet: Alphabet, model: Model):
-        self.loss = loss
-        self.validation_loss = validation_loss
+    def __init__(self, alphabet: Alphabet, model: Model):
         self.alphabet = alphabet
         self.model = model
 
     def to_json(self):
         return {
-            "loss": self.loss,
-            "validationLoss": self.validation_loss,
             "alphabet": self.alphabet.to_json(),
             "model": self.model.to_json()
         }
@@ -82,8 +79,7 @@ def graves(input_dim=26, rnn_size=512, output_dim=29, std=0.6) -> Model:
 
     x = BatchNormalization(axis=-1)(input_layer)
     x = GaussianNoise(std)(x)
-    x = Bidirectional(LSTM(rnn_size,
-                           return_sequences=True))(x)
+    x = Bidirectional(LSTM(rnn_size, return_sequences=True))(x)
     x = TimeDistributed(Dense(output_dim))(x)
     prediction_layer = Activation('softmax', name='softmax')(x)
 
@@ -91,6 +87,39 @@ def graves(input_dim=26, rnn_size=512, output_dim=29, std=0.6) -> Model:
     model.output_length = lambda x: x
 
     return model
+
+
+def ds2_gru_model(input_dim=26, fc_size=1024, rnn_size=512, output_dim=29, convolutional_layers=3, lstm_layers=5):
+    """
+    Reference:
+        https://arxiv.org/abs/1512.02595
+    """
+    pass
+    # K.set_learning_phase(1)
+    # input_layer = Input(name='input', shape=(None, input_dim))
+    #
+    # x = BatchNormalization(axis=-1)(input_layer)
+    #
+    # conv = ZeroPadding1D(padding=(0, 512))(x)
+    # for l in range(convolutional_layers):
+    #     x = Conv1D(filters=fc_size, name='conv_{}'.format(l + 1), kernel_size=11, padding='valid',
+    #                activation='relu', strides=2)(conv)
+    #
+    # x = BatchNormalization(axis=-1)(x)
+    #
+    # for l in range(lstm_layers):
+    #     x = Bidirectional(LSTM(rnn_size, return_sequences=True))(x)
+    #     x = TimeDistributed(Dense(output_dim))(x)
+    #
+    # x = BatchNormalization(axis=-1)(x)
+    # x = TimeDistributed(Dense(output_dim))(x)
+    # x = TimeDistributed(Dense(fc_size, activation=clipped_relu))(x)
+    # prediction_layer = TimeDistributed(Dense(output_dim, name="y_pred", activation="softmax"))(x)
+    #
+    # model = Model(inputs=input_layer, outputs=prediction_layer)
+    # model.output_length = lambda x: x
+    #
+    # return model
 
 
 def get(name: str) -> Model:
@@ -107,16 +136,18 @@ def load(save_file_path: str, weights_path: str) -> SaveFile:
     model.load_weights(weights_path)
     model.output_length = lambda x: x
     alphabet = Alphabet(save_file['alphabet'])
-    loss = save_file['loss']
-    validation_loss = save_file['validationLoss']
 
-    return SaveFile(loss, validation_loss, alphabet, model)
+    return SaveFile(alphabet, model)
 
 
 def save(save_file: SaveFile, model_path: str, weights_path: str):
+    log = get_logger(__name__)
+
     # store date to save file
     with safe_open(model_path, 'w') as file:
         file.write(json.dumps(save_file.to_json(), indent=4))
+    log.info('Saved model to %s' % os.path.abspath(model_path))
 
     # save weights
     save_file.model.save_weights(weights_path)
+    log.info('Saved weights to %s' % os.path.abspath(weights_path))

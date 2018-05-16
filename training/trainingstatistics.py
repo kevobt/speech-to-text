@@ -1,6 +1,9 @@
+import os
 import json
 
 from typing import List
+
+from logger import get_logger
 
 
 class TrainingStatistics:
@@ -21,13 +24,13 @@ class TrainingStatistics:
         return len(self.loss)
 
 
-def load(file_name: str) -> TrainingStatistics:
+def load(path: str) -> TrainingStatistics:
     """
     Gets the history of a training containing the losses
-    :param file_name: path to the history of the training
+    :param path: path to the history of the training
     :return: TrainingStatistics
     """
-    with open(file_name, 'r') as file:
+    with open(path, 'r') as file:
         training_plan = json.load(file)
 
     return TrainingStatistics(training_plan["loss"],
@@ -35,6 +38,8 @@ def load(file_name: str) -> TrainingStatistics:
 
 
 def save(path: str, statistics: TrainingStatistics):
+    log = get_logger(__name__)
+
     with open(path, 'w') as file:
         file.write(json.dumps(statistics.to_json(), indent=4))
-
+    log.info('Saved statistics to %s' % os.path.abspath(path))

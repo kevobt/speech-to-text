@@ -2,7 +2,7 @@ import errno
 import json
 import os
 
-from os.path import exists
+from os.path import exists, abspath
 
 from typing import List
 
@@ -64,20 +64,23 @@ def is_text_valid(text: str, alphabet: Alphabet) -> bool:
     return True
 
 
-def load(path: str) -> List[TrainingData]:
+def load(*args: str) -> List[TrainingData]:
     """
     Loads a file containing training data
-    :param path: path to the file
+    :param argv: paths to training data files
     :return: List of training data
     """
     log = getLogger(__name__)
     log.info('Validating training data ...')
 
-    if not exists(path):
-        log.error('The training data file at "%s" does not exist' % path)
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
+    training_data = []
+    for path in [item[0] for item in args]:
+        if not exists(path):
+            log.error('The training data file at "%s" does not exist' % abspath(path))
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
-    with open(path, 'r') as file:
-        training_data = [TrainingData(data['path'], data['text']) for data in json.load(file)]
+        with open(path, 'r') as file:
+            training_data = training_data + [TrainingData(data['path'], data['text']) for data in json.load(file)]
 
     return training_data
+

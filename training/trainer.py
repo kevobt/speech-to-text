@@ -3,12 +3,14 @@ from keras.optimizers import Adam
 
 from training.callbacks.trainingcallback import TrainingCallback
 from training.datagenerator import DataGenerator
+from training.trainingconfig import TrainingConfig
 from training.trainingdata import TrainingData
 from training.training import Training
 
 from models import add_ctc_loss
 
 from logger import get_logger
+from training.trainingstatistics import TrainingStatistics
 
 from utils.list import split
 
@@ -24,7 +26,10 @@ def calc_steps_per_epoch(data: List[TrainingData], batch_size):
     return len(data) // batch_size
 
 
-def run_training(training: Training, save_file_path: str):
+def run_training(training: Training,
+                 save_file_path: str,
+                 statistics: TrainingStatistics,
+                 config: TrainingConfig):
     log = get_logger(__name__)
 
     training_data_generator, validation_data_generator = create_generators(training)
@@ -54,7 +59,7 @@ def run_training(training: Training, save_file_path: str):
                         validation_data=validation_data_generator.next_batch(),
                         validation_steps=validation_steps,
                         verbose=1,
-                        callbacks=[TrainingCallback(training, save_file_path)],
+                        callbacks=[TrainingCallback(save_file_path, statistics, training, config)],
                         initial_epoch=training.passed_epochs)
 
     log.info('Training finished')

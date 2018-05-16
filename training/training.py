@@ -1,6 +1,5 @@
+import errno
 import os
-import json
-from itertools import chain
 
 from typing import List
 
@@ -10,17 +9,13 @@ from speech.alphabet import Alphabet
 from speech.alphabet import load as load_alphabet
 
 from training.trainingdata import TrainingData
-from training.trainingconfig import TrainingConfig
 from training.trainingconfig import load as load_config
 from training.trainingdata import load as load_training_data, validate as validate_training_data
 
-from models import get as load_model
+from models import load as load_model_save_file, get as get_model
 
 from logger import get_logger
-
-from utils.fs import safe_open
-
-WEIGHTS_FILE_NAME = 'weights'
+from training.trainingstatistics import TrainingStatistics, load as load_statistics
 
 
 class Training:
@@ -29,150 +24,105 @@ class Training:
                  alphabet: Alphabet,
                  batch_size: int,
                  epochs: int,
-                 loss: List[float],
-                 validation_loss: List[float],
+                 training_statistics: TrainingStatistics,
                  training_data: List[TrainingData]):
         self.model = model
         self.alphabet = alphabet
         self.batch_size = batch_size
         self.epochs = epochs
-        self.loss = loss
-        self.validation_loss = validation_loss
+        self.training_statistics = training_statistics
         self.training_data = training_data
-
-    def to_json(self):
-        return {
-            "loss": self.loss,
-            "validationLoss": self.validation_loss,
-            "alphabet": self.alphabet.to_json()
-        }
 
     @property
     def passed_epochs(self):
-        return len(self.loss)
+        return len(self.training_statistics.loss)
 
 
-def load(path: str) -> Training:
+def load(model_save_file_path: str,
+         weights_path: str,
+         training_configuration_path: str,
+         training_statistics_path: str) -> Training:
     """
     Loads a training from an existing directory
     :param path: Path to the directory where the training data is stored
     :return: A training
     """
     log = get_logger(__name__)
-    log.info('Loading training %s ...' % os.path.abspath(path))
-
-    training_name = os.path.splitext(os.path.basename(path))[0]
-    directory_path = os.path.dirname(path)
-    weights_path = os.path.join(directory_path, training_name + '.weights.h5')
-    training_config_path = os.path.join(directory_path, training_name + '.conf.json')
-    save_file = os.path.join(directory_path, training_name + '.sav')
+    log.info('Loading training ...')
 
     # Check paths
-    if not os.path.exists(save_file):
-        raise FileNotFoundError('The training file "%s" does not exist' % save_file)
+    if not os.path.exists(model_save_file_path):
+        raise FileNotFoundError('The model file "%s" does not exist' % model_save_file_path)
 
     if not os.path.exists(weights_path):
         raise FileNotFoundError('The weights file "%s" for this training is missing' % weights_path)
 
-    if not os.path.exists(training_config_path):
-        raise FileNotFoundError('The configuration file "%s" for this training is missing' % training_config_path)
+    if not os.path.exists(training_configuration_path):
+        raise FileNotFoundError('The configuration file "%s" for this training is missing' % training_configuration_path)
 
-    config = load_config(training_config_path)
+    if not os.path.exists(training_statistics_path):
+        raise FileNotFoundError('The configuration file "%s" for this training is missing' % training_statistics_path)
+
+    config = load_config(training_configuration_path)
 
     # load all training data like specified in the config
     try:
-        training_data = list(chain.from_iterable([load_training_data(path) for path in config.training_data]))
+        training_data = load_training_data(config.training_data)
     except FileNotFoundError as ex:
-        log.error('Check the path of the trainingData property in your training configuration file')
+        log.error("Please check your configuration file at %s" % os.path.abspath(training_configuration_path))
         raise ex
 
-    # limit data like specified in the config
+    # load model from the save file
+    model_save = load_model_save_file(model_save_file_path, weights_path)
+
+    # only use valid training data and set to limitation defined in config
+    training_data = validate_training_data(training_data, model_save.alphabet)
     training_data = training_data[:config.training_data_quantity]
 
-    # only use valid training data
-    alphabet = load_alphabet(config.alphabet_path)
-    training_data = validate_training_data(training_data, alphabet)
-
-    with open(save_file, 'r') as file:
-        training_save = json.load(file)
-
-    model = load_model(config.net)
     batch_size = config.batch_size
     epochs = config.epochs
-    loss = training_save['loss']
-    validation_loss = training_save['validationLoss']
-
-    model.load_weights(weights_path)
+    statistics = load_statistics(training_statistics_path)
 
     log.info('Training loaded')
 
-    return Training(model, alphabet, batch_size, epochs, loss, validation_loss, training_data)
+    return Training(model_save.model, model_save.alphabet, batch_size, epochs, statistics, training_data)
 
 
-def create(path: str, config: TrainingConfig, overwrite: bool) -> Training:
+def create(training_configuration_path: str) -> Training:
     """
     Creates a training object using the given configuration
-    :param path: Path to the training directory
-    :param config: Training plan
-    :param overwrite: If true, existing training data will be overwritten
+    :param training_configuration_path: Training plan
     :return: Training
     """
     log = get_logger(__name__)
     log.info('Preparing training ...')
 
-    training_name = os.path.splitext(os.path.basename(path))[0]
-    directory_path = os.path.dirname(path)
-    save_path = os.path.join(directory_path, training_name + '.sav')
-    weights_path = os.path.join(directory_path, training_name + '.weights.h5')
-    training_config_path = os.path.join(directory_path, training_name + '.conf.json')
+    #check paths
+    if not os.path.exists(training_configuration_path):
+        log.error('The configuration file at "%s" does not exist' % os.path.abspath(training_configuration_path))
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), training_configuration_path)
 
-    # check if other training files could be overwritten
-    if not overwrite:
-        if os.path.exists(save_path) or os.path.exists(weights_path) or os.path.exists(training_config_path):
-            raise FileExistsError('The training file "%s" already exists' % save_path)
-
-    # copy the training configuration to the training directory
-    with safe_open(training_config_path, "w") as file:
-        file.write(json.dumps(config.to_json()))
-        log.info('Copied training configuration to "%s"' % os.path.abspath(training_config_path))
+    config = load_config(training_configuration_path)
 
     # create data for training object
-    model = load_model(config.net)
+    model = get_model(config.net)
     batch_size = config.batch_size
     epochs = config.epochs
 
     # load all training data like specified in the config
     try:
-        training_data = list(chain.from_iterable([load_training_data(path) for path in config.training_data]))
+        training_data = load_training_data(config.training_data)
     except FileNotFoundError as ex:
-        log.error('Check the path of the trainingData property in your training configuration file')
+        log.error("Please check your configuration file at %s" % os.path.abspath(training_configuration_path))
         raise ex
 
-    # limit data like specified in the config
-    training_data = training_data[:config.training_data_quantity]
-
-    # only use valid training data
     alphabet = load_alphabet(config.alphabet_path)
+
+    # only use valid training data and set to limitation defined in config
     training_data = validate_training_data(training_data, alphabet)
+    training_data = training_data[:config.training_data_quantity]
 
     log.info("Created training")
 
-    return Training(model, alphabet, batch_size, epochs, [], [], training_data)
+    return Training(model, alphabet, batch_size, epochs, TrainingStatistics([], []), training_data)
 
-
-def save(path: str, training: Training, save_weights: bool):
-    log = get_logger(__name__)
-    training_name = os.path.splitext(os.path.basename(path))[0]
-    directory_path = os.path.dirname(path)
-    save_path = os.path.join(directory_path, training_name + '.sav')
-    weights_path = os.path.join(directory_path, training_name + '.weights.h5')
-
-    # save weights as .h5
-    if save_weights:
-        training.model.save_weights(weights_path)
-
-    # save training .json
-    with safe_open(save_path, "w") as file:
-        file.write(json.dumps(training.to_json(), indent=4))
-
-    log.info('Saved training to "%s' % os.path.abspath(save_path))
