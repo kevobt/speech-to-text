@@ -102,7 +102,7 @@ Pass the following arguments:
 
 For example:
 ```shell
-python predict.py "trainings/graves.json" "trainings/graves.weights-20-65.68075" "media/audio.wav"
+python predict.py "trainings/graves.json" "trainings/graves.weights-20-65.68075.h5" "media/audio.wav"
 ```
 
 ### Displaying training statistics
