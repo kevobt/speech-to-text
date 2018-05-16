@@ -32,3 +32,9 @@ def load(file_name: str) -> TrainingStatistics:
 
     return TrainingStatistics(training_plan["loss"],
                               training_plan["validationLoss"])
+
+
+def save(path: str, statistics: TrainingStatistics):
+    with open(path, 'w') as file:
+        file.write(json.dumps(statistics.to_json(), indent=4))
+
