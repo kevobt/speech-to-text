@@ -89,19 +89,20 @@ Simply execute the `continuetraining.py` and pass the path to the training save 
 You don't have to specify the file extension:
 
 ```
-python continuetraining.py "trainings/graves"
+python continuetraining.py "trainings/graves.json"
 ```
 
 ### Making a prediction
 In order to create a transcription of an audio file, use the `predict.py` script.
 Pass the following arguments: 
 
-- `path`: Path to a training save file. Again, you don't have to specify the file extension
+- `path`: Path to a training save file
+- `weights`, Path to a weights matrix
 - `audio`: Path to the audio file which shall be transcribed
 
 For example:
 ```shell
-python predict.py "trainings/graves" "media/audio.wav"
+python predict.py "trainings/graves.json" "trainings/graves.weights-20-65.68075" "media/audio.wav"
 ```
 
 ### Displaying training statistics
