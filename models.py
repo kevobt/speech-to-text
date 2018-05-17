@@ -89,42 +89,51 @@ def graves(input_dim=26, rnn_size=512, output_dim=29, std=0.6) -> Model:
     return model
 
 
-def ds2_gru_model(input_dim=26, fc_size=1024, rnn_size=512, output_dim=29, convolutional_layers=3, lstm_layers=5):
+def cnn_lstm(input_dim=26, filters=1024, rnn_size=512, output_dim=29, convolutional_layers=3, lstm_layers=5):
     """
-    Reference:
-        https://arxiv.org/abs/1512.02595
+    A model using a combination of CNNs and LSTMs inspired by DeepSpeech 2
+    Reference: https://arxiv.org/abs/1512.02595
     """
-    pass
-    # K.set_learning_phase(1)
-    # input_layer = Input(name='input', shape=(None, input_dim))
-    #
-    # x = BatchNormalization(axis=-1)(input_layer)
-    #
-    # conv = ZeroPadding1D(padding=(0, 512))(x)
-    # for l in range(convolutional_layers):
-    #     x = Conv1D(filters=fc_size, name='conv_{}'.format(l + 1), kernel_size=11, padding='valid',
-    #                activation='relu', strides=2)(conv)
-    #
-    # x = BatchNormalization(axis=-1)(x)
-    #
-    # for l in range(lstm_layers):
-    #     x = Bidirectional(LSTM(rnn_size, return_sequences=True))(x)
-    #     x = TimeDistributed(Dense(output_dim))(x)
-    #
-    # x = BatchNormalization(axis=-1)(x)
-    # x = TimeDistributed(Dense(output_dim))(x)
-    # x = TimeDistributed(Dense(fc_size, activation=clipped_relu))(x)
-    # prediction_layer = TimeDistributed(Dense(output_dim, name="y_pred", activation="softmax"))(x)
-    #
-    # model = Model(inputs=input_layer, outputs=prediction_layer)
-    # model.output_length = lambda x: x
-    #
-    # return model
+    K.set_learning_phase(1)
+    input_layer = Input(name='input', shape=(None, input_dim))
+
+    x = BatchNormalization(axis=-1)(input_layer)
+    x = ZeroPadding1D(padding=(0, 512))(x)
+
+    # Add convolutional layers
+    for l in range(convolutional_layers):
+        x = Conv1D(filters=filters,
+                   name='convolution_{}'.format(l + 1),
+                   kernel_size=11,
+                   padding='valid',
+                   activation='relu',
+                   strides=2)(x)
+
+    x = BatchNormalization(axis=-1)(x)
+
+    # add lstm layers
+    for l in range(lstm_layers):
+        x = Bidirectional(LSTM(rnn_size, return_sequences=True))(x)
+        x = TimeDistributed(Dense(output_dim))(x)
+
+    x = BatchNormalization(axis=-1)(x)
+
+    # add Dense layer
+    x = TimeDistributed(Dense(filters, activation='relu'))(x)
+    prediction_layer = TimeDistributed(Dense(output_dim, name="y_pred", activation="softmax"))(x)
+
+    model = Model(inputs=input_layer, outputs=prediction_layer)
+    model.output_length = lambda x: x
+
+    return model
 
 
 def get(name: str) -> Model:
     if name == 'graves':
         return graves()
+    if name == 'ds2':
+        return cnn_lstm()
+
     raise ModelNotFoundError(name)
 
 
