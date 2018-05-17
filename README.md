@@ -108,5 +108,5 @@ python predict.py "trainings/graves.json" "trainings/graves.weights-20-65.68075.
 ### Displaying training statistics
 If you want to display the training loss and the validation loss of a training, execute the `statistics.py` script:
 ```shell
-python statistics.py "trainings/graves"
+python statistics.py "trainings/graves.statistics.json"
 ```
