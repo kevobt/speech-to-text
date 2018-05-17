@@ -35,7 +35,7 @@ def run_training(training: Training,
     training_data_generator, validation_data_generator = create_generators(training)
 
     # Take a stochastic gradient descent optimizer
-    optimizer = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-8)
+    optimizer = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-8, clipnorm=5)
 
     # add ctc layer to the model
     model = add_ctc_loss(training.model)
