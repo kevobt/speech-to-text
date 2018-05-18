@@ -12,13 +12,13 @@ from keras.layers import (BatchNormalization,
                           Bidirectional,
                           LSTM,
                           Lambda,
-                          GaussianNoise, Conv1D, ZeroPadding1D)
+                          GaussianNoise, Conv1D, ZeroPadding1D, GRU)
 
 from logger import get_logger
 from speech.alphabet import Alphabet
 from training.errors.modelnotfound import ModelNotFoundError
 from utils.fs import safe_open
-
+from keras.activations import relu
 
 class SaveFile:
     def __init__(self, alphabet: Alphabet, model: Model):
@@ -30,6 +30,10 @@ class SaveFile:
             "alphabet": self.alphabet.to_json(),
             "model": self.model.to_json()
         }
+
+
+def clipped_relu(x):
+    return relu(x, max_value=20)
 
 
 def ctc_batch_cost(args):
@@ -89,40 +93,50 @@ def graves(input_dim=26, rnn_size=512, output_dim=29, std=0.6) -> Model:
     return model
 
 
-def cnn_lstm(input_dim=26, filters=1024, rnn_size=512, output_dim=29, convolutional_layers=3, lstm_layers=5):
+def ds2_gru_model(input_dim=26, fc_size=1024, rnn_size=512, output_dim=29, initialization='glorot_uniform',
+                  conv_layers=3, gru_layers=5, use_conv=True):
+    """ DeepSpeech 2 implementation
+    Architecture:
+        Input Spectrogram TIMEx161
+        1 Batch Normalisation layer on input
+        1-3 Convolutional Layers
+        1 Batch Normalisation layer
+        1-7 BiDirectional GRU Layers
+        1 Batch Normalisation layer
+        1 Fully connected Dense
+        1 Softmax output
+    Details:
+       - Uses Spectrogram as input rather than MFCC
+       - Did not use BN on the first input
+       - Network does not dynamically adapt to maximum audio size in the first convolutional layer. Max conv
+          length padded at 2048 chars, otherwise use_conv=False
+    Reference:
+        https://arxiv.org/abs/1512.02595
     """
-    A model using a combination of CNNs and LSTMs inspired by DeepSpeech 2
-    Reference: https://arxiv.org/abs/1512.02595
-    """
+
     K.set_learning_phase(1)
-    input_layer = Input(name='input', shape=(None, input_dim))
 
-    #x = BatchNormalization(axis=-1, momentum=0.99, epsilon=1e-3, center=True, scale=True)(input_layer)
+    input_data = Input(shape=(None, input_dim), name='input')
+    x = BatchNormalization(axis=-1, momentum=0.99, epsilon=1e-3, center=True, scale=True)(input_data)
 
-    # Add convolutional layers
-    #for l in range(convolutional_layers):
-    x = Conv1D(filters,
-               11,
-               name='conv_{}'.format(1),
-               padding='same',
-               strides=2,
-               kernel_initializer='glorot_uniform',
-               activation='relu')(input_layer)
+    if use_conv:
+        conv = ZeroPadding1D(padding=(0, 2048))(x)
+        for l in range(conv_layers):
+            x = Conv1D(filters=fc_size, name='conv_{}'.format(l + 1), kernel_size=11, padding='valid',
+                       activation='relu', strides=2)(conv)
 
     x = BatchNormalization(axis=-1, momentum=0.99, epsilon=1e-3, center=True, scale=True)(x)
 
-    # # add lstm layers
-    # for l in range(lstm_layers):
-    #     x = Bidirectional(LSTM(rnn_size, return_sequences=True))(x)
-    #     x = TimeDistributed(Dense(output_dim))(x)
-    #
-    # x = BatchNormalization(axis=-1, momentum=0.99, epsilon=1e-3, center=True, scale=True)(x)
+    for l in range(gru_layers):
+        x = Bidirectional(LSTM(rnn_size, return_sequences=True))(x)
 
-    # add Dense layer
-    #x = TimeDistributed(Dense(filters, activation='relu'))(x)
-    prediction_layer = TimeDistributed(Dense(output_dim, name="y_pred", activation="softmax"))(x)
+    x = BatchNormalization(axis=-1, momentum=0.99, epsilon=1e-3, center=True, scale=True)(x)
 
-    model = Model(inputs=input_layer, outputs=prediction_layer)
+    # Last Layer 5+6 Time Dist Dense Layer & Softmax
+    x = TimeDistributed(Dense(fc_size, activation='relu'))(x)
+    y_pred = TimeDistributed(Dense(output_dim, name="y_pred", activation="softmax"))(x)
+
+    model = Model(inputs=input_data, outputs=y_pred)
     model.output_length = lambda x: x
 
     return model
@@ -132,7 +146,7 @@ def get(name: str) -> Model:
     if name == 'graves':
         return graves()
     if name == 'ds2':
-        return cnn_lstm()
+        return ds2_gru_model()
 
     raise ModelNotFoundError(name)
 
