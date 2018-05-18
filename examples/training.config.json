@@ -2,7 +2,7 @@
   "epochs": 10,
   "batchSize": 20,
   "trainingDataQuantity": 50000,
-  "net": "graves",
+  "net": "ds2",
   "trainingData": [
     "speech-to-text/training_data.json"
   ],

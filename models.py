@@ -97,29 +97,29 @@ def cnn_lstm(input_dim=26, filters=1024, rnn_size=512, output_dim=29, convolutio
     K.set_learning_phase(1)
     input_layer = Input(name='input', shape=(None, input_dim))
 
-    x = BatchNormalization(axis=-1)(input_layer)
-    x = ZeroPadding1D(padding=(0, 512))(x)
+    #x = BatchNormalization(axis=-1, momentum=0.99, epsilon=1e-3, center=True, scale=True)(input_layer)
 
     # Add convolutional layers
-    for l in range(convolutional_layers):
-        x = Conv1D(filters=filters,
-                   name='convolution_{}'.format(l + 1),
-                   kernel_size=11,
-                   padding='valid',
-                   activation='relu',
-                   strides=2)(x)
+    #for l in range(convolutional_layers):
+    x = Conv1D(filters,
+               11,
+               name='conv_{}'.format(1),
+               padding='same',
+               strides=2,
+               kernel_initializer='glorot_uniform',
+               activation='relu')(input_layer)
 
-    x = BatchNormalization(axis=-1)(x)
+    x = BatchNormalization(axis=-1, momentum=0.99, epsilon=1e-3, center=True, scale=True)(x)
 
-    # add lstm layers
-    for l in range(lstm_layers):
-        x = Bidirectional(LSTM(rnn_size, return_sequences=True))(x)
-        x = TimeDistributed(Dense(output_dim))(x)
-
-    x = BatchNormalization(axis=-1)(x)
+    # # add lstm layers
+    # for l in range(lstm_layers):
+    #     x = Bidirectional(LSTM(rnn_size, return_sequences=True))(x)
+    #     x = TimeDistributed(Dense(output_dim))(x)
+    #
+    # x = BatchNormalization(axis=-1, momentum=0.99, epsilon=1e-3, center=True, scale=True)(x)
 
     # add Dense layer
-    x = TimeDistributed(Dense(filters, activation='relu'))(x)
+    #x = TimeDistributed(Dense(filters, activation='relu'))(x)
     prediction_layer = TimeDistributed(Dense(output_dim, name="y_pred", activation="softmax"))(x)
 
     model = Model(inputs=input_layer, outputs=prediction_layer)
